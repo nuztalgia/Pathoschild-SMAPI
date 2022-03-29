@@ -5,15 +5,15 @@
 //
 // This will be removed when Harmony/MonoMod are updated to incorporate the fix.
 //
-// Special thanks to 0x0ade for submitting this worokaround! Copy/pasted and adapted from MonoMod.
+// Special thanks to 0x0ade for submitting this workaround! Copy/pasted and adapted from MonoMod.
 
 using System;
-using System.Reflection;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
-using System.Reflection.Emit;
 
 // ReSharper disable once CheckNamespace -- Temporary hotfix submitted by the MonoMod author.
 namespace MonoMod.Utils
@@ -24,33 +24,24 @@ namespace MonoMod.Utils
     {
         // .NET Framework can break member ordering if using Module.Resolve* on certain members.
 
-        private static object[] _NoArgs = Array.Empty<object>();
-        private static object[] _CacheGetterArgs = { /* MemberListType.All */ 0, /* name apparently always null? */ null };
+        private static readonly object[] _NoArgs = Array.Empty<object>();
+        private static readonly object[] _CacheGetterArgs = { /* MemberListType.All */ 0, /* name apparently always null? */ null };
 
-        private static Type t_RuntimeModule =
-            typeof(Module).Assembly
-            .GetType("System.Reflection.RuntimeModule");
-
-        private static PropertyInfo p_RuntimeModule_RuntimeType =
-            typeof(Module).Assembly
-            .GetType("System.Reflection.RuntimeModule")
-            ?.GetProperty("RuntimeType", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-
-        private static Type t_RuntimeType =
+        private static readonly Type t_RuntimeType =
             typeof(Type).Assembly
             .GetType("System.RuntimeType");
 
-        private static PropertyInfo p_RuntimeType_Cache =
+        private static readonly PropertyInfo p_RuntimeType_Cache =
             typeof(Type).Assembly
             .GetType("System.RuntimeType")
             ?.GetProperty("Cache", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
-        private static MethodInfo m_RuntimeTypeCache_GetFieldList =
+        private static readonly MethodInfo m_RuntimeTypeCache_GetFieldList =
             typeof(Type).Assembly
             .GetType("System.RuntimeType+RuntimeTypeCache")
             ?.GetMethod("GetFieldList", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
-        private static MethodInfo m_RuntimeTypeCache_GetPropertyList =
+        private static readonly MethodInfo m_RuntimeTypeCache_GetPropertyList =
             typeof(Type).Assembly
             .GetType("System.RuntimeType+RuntimeTypeCache")
             ?.GetMethod("GetPropertyList", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -109,24 +100,10 @@ namespace MonoMod.Utils
             }
         }
 
-        public static Type GetModuleType(this Module module)
-        {
-            // Sadly we can't blindly resolve type 0x02000001 as the runtime throws ArgumentException.
-
-            if (module == null || t_RuntimeModule == null || !t_RuntimeModule.IsInstanceOfType(module))
-                return null;
-
-            // .NET
-            if (p_RuntimeModule_RuntimeType != null)
-                return (Type)p_RuntimeModule_RuntimeType.GetValue(module, _NoArgs);
-
-            // The hotfix doesn't apply to Mono anyway, thus that's not copied over.
-
-            return null;
-        }
-
         public static Type GetRealDeclaringType(this MemberInfo member)
-            => member.DeclaringType ?? member.Module?.GetModuleType();
+        {
+            return member.DeclaringType ?? member.Module?.GetModuleType();
+        }
 
         public static void FixReflectionCache(this Type type)
         {
@@ -143,7 +120,8 @@ namespace MonoMod.Utils
                 if (!t_RuntimeType.IsInstanceOfType(type))
                     continue;
 
-                CacheFixEntry entry = _CacheFixed.GetValue(type, rt => {
+                CacheFixEntry entry = _CacheFixed.GetValue(type, rt =>
+                {
                     CacheFixEntry entryNew = new CacheFixEntry();
                     object cache;
                     Array properties, fields;

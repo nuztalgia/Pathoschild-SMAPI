@@ -27,6 +27,7 @@
   * Added `IAssetName` fields to the info received by `IAssetEditor` and `IAssetLoader` methods.  
     _This adds methods for working with asset names, parsed locales, etc._
   * Added `helper.Content.ParseAssetName` to get an `IAssetName` for an arbitrary asset key.
+  * Updated dependencies (Harmony 2.1.1 → 2.2.1 and MonoMod.Common 21.6.21.1 → 22.3.5.1).
   * If an asset is loaded multiple times in the same tick, `IAssetLoader.CanLoad` and `IAssetEditor.CanEdit` are now cached unless invalidated by `helper.Content.InvalidateCache`.
   * Fixed the `SDate` constructor being case-sensitive.
   * Fixed support for using locale codes from custom languages in asset names (e.g. `Data/Achievements.eo-EU`).
